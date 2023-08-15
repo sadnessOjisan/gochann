@@ -18,3 +18,7 @@ All tools successfully installed. You are ready to Go. :)
 Installing golang.org/x/tools/gopls@latest (/Users/ojisan/go/bin/gopls) SUCCEEDED
 
 All tools successfully installed. You are ready to Go. :)
+
+## date 型を作る
+
+https://qiita.com/soicchi/items/10de42368d08e519c510
