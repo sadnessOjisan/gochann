@@ -179,10 +179,19 @@ type postsHandler struct {
 	count int
 }
 
+type Comment struct {
+	ID        int       `db:"id"`
+	Text      string    `db:"text"`
+	UserId    int       `db:"id"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+}
+
 type Post struct {
 	ID        int       `db:"id"`
 	Text      string    `db:"text"`
 	UserId    int       `db:"id"`
+	Comments  []Comment `db:"comments"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
 }
@@ -254,12 +263,44 @@ func postsNewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func postsDetailHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		sub := strings.TrimPrefix(r.URL.Path, "/posts")
+		_, id := filepath.Split(sub)
+		if id == "" {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Printf("id is not found")
+			return
+		}
+		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		defer db.Close()
+		if err != nil {
+			fmt.Printf("error")
+		}
+		row := db.QueryRow("select id, text, user_id, created_at, updated_at from posts where id = ? limit 1", id)
+
+		p := &Post{}
+		if err := row.Scan(&p.ID, &p.Text, &p.UserId, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			log.Fatalf("getRows rows.Scan error err:%v", err)
+		}
+
+		t := template.Must(template.ParseFiles("./template/post-detail.html"))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := t.Execute(w, p); err != nil {
+			panic(err.Error())
+		}
+		return
+	}
+
+}
+
 func main() {
 	http.Handle("/count", new(countHandler))
 	http.Handle("/users", new(getUsersHandler))
 	// for /users/:id
 	http.Handle("/users/", new(getUserHandler))
 	http.Handle("/users/new", new(newUserHandler))
+	http.HandleFunc("/posts/", postsDetailHandler)
 	http.Handle("/posts", new(postsHandler))
 	http.HandleFunc("/posts/new", postsNewHandler)
 

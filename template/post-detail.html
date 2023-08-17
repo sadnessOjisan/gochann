@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>learn go server</title>
+  </head>
+  <body>
+    <a href="/posts/new">new</a>
+    <h1>投稿</h1>
+    <div>
+      <h2>{{ .Text }}</h2>
+      <p>{{ .CreatedAt }}</p>
+    </div>
+    <form>
+      <form action="/posts/{{ .ID }}/comments" method="post">
+        <label for="text">post</label>
+        <input name="text" type="text" id="text" />
+        <button type="submit">送信</button>
+      </form>
+    </form>
+    <div>
+      {{ range .Comments }}
+      <div>
+        <h2>{{ .Text }}</h2>
+        <p>{{ .CreatedAt }}</p>
+      </div>
+      {{ end }}
+    </div>
+  </body>
+</html>
