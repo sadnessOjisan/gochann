@@ -277,16 +277,36 @@ func postsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Printf("error")
 		}
-		row := db.QueryRow("select id, text, user_id, created_at, updated_at from posts where id = ? limit 1", id)
+		query := `
+		  select p.id, p.text, p.user_id, p.created_at, p.updated_at, c.id as comment_id, c.text as comment_text, c.user_id as comment_user_id, c.created_at as comment_created_at, c.updated_at as comment_updated_at
+		  from posts p
+		  inner join comments c on p.id = c.post_id
+		  where p.id = ?
+		  order by c.id
+		`
+		rows, err := db.Query(query, id)
+		if err != nil {
+			println("db query error")
+			panic(err.Error())
+		}
+		println("rows: ", rows)
 
-		p := &Post{}
-		if err := row.Scan(&p.ID, &p.Text, &p.UserId, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			log.Fatalf("getRows rows.Scan error err:%v", err)
+		post := &Post{}
+		for rows.Next() {
+			comment := &Comment{}
+			err = rows.Scan(&post.ID, &post.Text, &post.UserId, &post.CreatedAt, &post.UpdatedAt, &comment.ID, &comment.Text, &comment.UserId, &comment.CreatedAt, &comment.UpdatedAt)
+			if err != nil {
+				log.Fatalf("%v", *comment)
+				log.Fatalf("%v", err)
+				return
+			}
+			post.Comments = append(post.Comments, *comment)
 		}
 
 		t := template.Must(template.ParseFiles("./template/post-detail.html"))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := t.Execute(w, p); err != nil {
+
+		if err := t.Execute(w, post); err != nil {
 			panic(err.Error())
 		}
 		return
