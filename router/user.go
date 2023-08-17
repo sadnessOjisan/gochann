@@ -61,6 +61,7 @@ func UsersDetailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UsersHandler(w http.ResponseWriter, r *http.Request) {
+	// POST users
 	if r.Method == http.MethodPost {
 		name := r.FormValue("name")
 		password := []byte(r.FormValue("password"))
@@ -71,23 +72,66 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		defer db.Close()
 		if err != nil {
-			fmt.Printf("error")
-		}
-		ins, err := db.Prepare("insert into users(name, password) value (?, ?)")
-		if err != nil {
-			fmt.Printf("error")
+			log.Fatalf("open db error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		exsist_user_row := db.QueryRow("select count(*) from users where name = ? and password = ? limit 1", name, hashedPasswordString)
+		var count int
+		exsist_user_row.Scan(&count)
+
+		// アカウント情報が存在するユーザーならクッキー発行してログインさせる
+		if count == 1 {
+			uuid := pseudo_uuid()
+			cookie := &http.Cookie{
+				Name:     "token",
+				Value:    uuid,
+				Expires:  time.Now().AddDate(0, 0, 1),
+				SameSite: http.SameSiteStrictMode,
+				HttpOnly: true,
+				Secure:   true,
+			}
+			http.SetCookie(w, cookie)
+			http.Redirect(w, r, "/posts", http.StatusSeeOther)
+			return
+		}
+
+		// 入力情報に一致するユーザ情報がない場合はアカウントを新規作成してログイン
+		ins, err := db.Prepare("insert into users(name, password) value (?, ?)")
+		if err != nil {
+			log.Fatalf("prepare insert error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		res, err := ins.Exec(name, hashedPasswordString)
+		if err != nil {
+			log.Fatalf("insert error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		user_id, err := res.LastInsertId()
+		if err != nil {
+			log.Fatalf("get last id err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		uuid := pseudo_uuid()
 
 		session_insert, err := db.Prepare("insert into session(user_id, token) value (?, ?)")
-		session_insert_res, err := session_insert.Exec(user_id, uuid)
 		if err != nil {
-			log.Println(err)
+			log.Fatalf("prepare session insert error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		print(session_insert_res.LastInsertId())
+
+		_, err = session_insert.Exec(user_id, uuid)
+		if err != nil {
+			log.Fatalf("session insert error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		cookie := &http.Cookie{
 			Name:     "token",
@@ -101,6 +145,8 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/posts", http.StatusSeeOther)
 		return
 	}
+
+	// GET /posts
 	if r.Method == http.MethodGet {
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		if err != nil {
