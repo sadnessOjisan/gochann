@@ -81,7 +81,6 @@ func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		print(session_insert_res.LastInsertId())
 
-		w.Header().Add("set-cookie", "token=uuid; Max-Age=86400; SameSite=Strict; Secure; HttpOnly")
 		cookie := &http.Cookie{
 			Name:     "token",
 			Value:    uuid,
@@ -91,7 +90,7 @@ func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Secure:   true,
 		}
 		http.SetCookie(w, cookie)
-		http.Redirect(w, r, "/posts", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/posts", http.StatusSeeOther)
 		return
 	}
 	if r.Method == http.MethodGet {
