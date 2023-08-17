@@ -85,7 +85,7 @@ func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cookie := &http.Cookie{
 			Name:     "token",
 			Value:    uuid,
-			MaxAge:   86400,
+			Expires:  time.Now().AddDate(0, 0, 1),
 			SameSite: http.SameSiteStrictMode,
 			HttpOnly: true,
 			Secure:   true,
@@ -432,16 +432,28 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/posts", http.StatusSeeOther)
 }
 
+func signoutHandler(w http.ResponseWriter, r *http.Request) {
+	println("signtount")
+	cookie := &http.Cookie{
+		Name:    "token",
+		Expires: time.Now(),
+	}
+
+	http.SetCookie(w, cookie)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func main() {
-	http.HandleFunc("/", homeHandler)
 	http.Handle("/count", new(countHandler))
 	http.Handle("/users", new(getUsersHandler))
+	http.HandleFunc("/signout", signoutHandler)
 	// for /users/:id
 	http.Handle("/users/", new(getUserHandler))
 	http.Handle("/users/new", new(newUserHandler))
-	http.HandleFunc("/posts/", postsDetailHandler)
 	http.Handle("/posts", new(postsHandler))
+	http.HandleFunc("/posts/", postsDetailHandler)
 	http.HandleFunc("/posts/new", postsNewHandler)
+	http.HandleFunc("/", homeHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
