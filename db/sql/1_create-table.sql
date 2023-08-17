@@ -3,10 +3,17 @@ CREATE DATABASE IF NOT EXISTS micro_post;
 CREATE TABLE IF NOT EXISTS micro_post.users(
   `id` int(11) AUTO_INCREMENT,
   `name` varchar(12) NOT NULL,
-  `email` text NOT NULL,
+  `password` text NOT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS micro_post.session(
+  `user_id` int(11) PRIMARY KEY,
+  `token` text NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS micro_post.posts(

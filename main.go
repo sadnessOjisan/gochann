@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -13,6 +16,20 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+// see: https://stackoverflow.com/questions/15130321/is-there-a-method-to-generate-a-uuid-with-go-language
+func pseudo_uuid() (uuid string) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	uuid = fmt.Sprintf("%X-%X-%X-%X-%X", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+
+	return
+}
 
 // カウンターを持つ HTTP リクエストハンドラー
 type countHandler struct {
@@ -38,11 +55,15 @@ type User struct {
 
 func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		println("POST")
 		name := r.FormValue("name")
 		password := []byte(r.FormValue("password"))
-		hashedPassword := sha256.Sum256(password)
+		hasher := sha256.New()
+		hasher.Write([]byte(password))
+		hashedPasswordString := hex.EncodeToString(hasher.Sum(nil))
 
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		defer db.Close()
 		if err != nil {
 			fmt.Printf("error")
 		}
@@ -51,8 +72,18 @@ func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("error")
 			return
 		}
-		defer db.Close()
-		ins.Exec(name, hashedPassword)
+		res, err := ins.Exec(name, hashedPasswordString)
+		user_id, err := res.LastInsertId()
+		uuid := pseudo_uuid()
+
+		session_insert, err := db.Prepare("insert into session(user_id, token) value (?, ?)")
+		session_insert_res, err := session_insert.Exec(user_id, uuid)
+		if err != nil {
+			log.Println(err)
+		}
+		print(session_insert_res.LastInsertId())
+		w.Header().Add("set-cookie", "token=uuid; Max-Age=86400; SameSite=Strict; Secure; HttpOnly")
+		http.Redirect(w, r, "/posts", http.StatusTemporaryRedirect)
 		return
 	}
 	if r.Method == http.MethodGet {
@@ -119,11 +150,29 @@ func (h *getUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type newUserHandler struct {
+	count int
+}
+
+func (h *newUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Printf("method not allowed")
+		return
+	}
+	t := template.Must(template.ParseFiles("./template/users-new.html"))
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := t.Execute(w, nil); err != nil {
+		panic(err.Error())
+	}
+}
+
 func main() {
 	http.Handle("/count", new(countHandler))
 	http.Handle("/users", new(getUsersHandler))
 	// for /users/:id
 	http.Handle("/users/", new(getUserHandler))
+	http.Handle("/users/new", new(newUserHandler))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
