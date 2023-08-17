@@ -233,10 +233,10 @@ func (h *postsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			posts = append(posts, *p)
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(posts); err != nil {
-			log.Println(err)
+		t := template.Must(template.ParseFiles("./template/posts.html"))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := t.Execute(w, posts); err != nil {
+			panic(err.Error())
 		}
 	}
 }
