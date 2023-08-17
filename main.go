@@ -182,7 +182,7 @@ type postsHandler struct {
 type Comment struct {
 	ID        int       `db:"id"`
 	Text      string    `db:"text"`
-	UserId    int       `db:"id"`
+	User      User      `db:"user"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
 }
@@ -190,7 +190,7 @@ type Comment struct {
 type Post struct {
 	ID        int       `db:"id"`
 	Text      string    `db:"text"`
-	UserId    int       `db:"id"`
+	User      User      `db:"user"`
 	Comments  []Comment `db:"comments"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
@@ -230,15 +230,30 @@ func (h *postsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Printf("error")
 		}
-		rows, err := db.Query("select id, text, user_id, created_at, updated_at from posts")
+		rows, err := db.Query(`
+		  select
+		    p.id, p.text, p.created_at, p.updated_at,
+			u.id as user_id, u.name as user_name
+		  from
+		    posts p
+		  inner join
+		    users u
+		  on
+		    user_id = u.id
+		`)
 		defer db.Close()
-
+		if err != nil {
+			println("rows scan fail")
+			panic(err.Error())
+		}
 		var posts []Post
 		for rows.Next() {
 			p := &Post{}
-			if err := rows.Scan(&p.ID, &p.Text, &p.UserId, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			u := &User{}
+			if err := rows.Scan(&p.ID, &p.Text, &p.CreatedAt, &p.UpdatedAt, &u.ID, &u.Name); err != nil {
 				log.Fatalf("getRows rows.Scan error err:%v", err)
 			}
+			p.User = *u
 			posts = append(posts, *p)
 		}
 
@@ -278,9 +293,18 @@ func postsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("error")
 		}
 		query := `
-		  select p.id, p.text, p.user_id, p.created_at, p.updated_at, c.id as comment_id, c.text as comment_text, c.user_id as comment_user_id, c.created_at as comment_created_at, c.updated_at as comment_updated_at
+		  select
+		    p.id, p.text, p.created_at, p.updated_at,
+			post_user.id, post_user.name,
+			c.id as comment_id, c.text as comment_text, c.created_at as comment_created_at, c.updated_at as comment_updated_at,
+			comment_user.id, comment_user.name
 		  from posts p
-		  inner join comments c on p.id = c.post_id
+		  inner join comments c
+		  on p.id = c.post_id
+		  inner join users post_user
+		  on p.user_id = post_user.id
+		  inner join users comment_user
+		  on c.user_id = comment_user.id
 		  where p.id = ?
 		  order by c.id
 		`
@@ -294,12 +318,21 @@ func postsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		post := &Post{}
 		for rows.Next() {
 			comment := &Comment{}
-			err = rows.Scan(&post.ID, &post.Text, &post.UserId, &post.CreatedAt, &post.UpdatedAt, &comment.ID, &comment.Text, &comment.UserId, &comment.CreatedAt, &comment.UpdatedAt)
+			post_user := &User{}
+			comment_user := &User{}
+			err = rows.Scan(
+				&post.ID, &post.Text, &post.CreatedAt, &post.UpdatedAt,
+				&post_user.ID, &post_user.Name,
+				&comment.ID, &comment.Text, &comment.CreatedAt, &comment.UpdatedAt,
+				&comment_user.ID, &comment_user.Name,
+			)
 			if err != nil {
 				log.Fatalf("%v", *comment)
 				log.Fatalf("%v", err)
 				return
 			}
+			post.User = *post_user
+			comment.User = *comment_user
 			post.Comments = append(post.Comments, *comment)
 		}
 

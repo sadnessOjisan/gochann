@@ -12,6 +12,7 @@
     {{ range . }}
     <a href="/posts/{{ .ID }}">
       <h2>{{ .Text }}</h2>
+      <p>{{ .User.Name }}</p>
       <p>{{ .CreatedAt }}</p>
     </a>
     {{ end }}

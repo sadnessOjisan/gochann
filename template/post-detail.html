@@ -12,6 +12,7 @@
     <div>
       <h2>{{ .Text }}</h2>
       <p>{{ .CreatedAt }}</p>
+      <span>{{.User.Name}}</span>
     </div>
     {{.ID}}
     <form action="/posts/{{ .ID }}/comments" method="post">
@@ -22,8 +23,10 @@
     <div>
       {{ range .Comments }}
       <div>
+        <span>{{ .ID }}</span>
         <h2>{{ .Text }}</h2>
         <p>{{ .CreatedAt }}</p>
+        <span>{{.User.Name}}</span>
       </div>
       {{ end }}
     </div>
