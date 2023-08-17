@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS micro_post.users(
   `id` int(11) AUTO_INCREMENT,
   `name` varchar(12) NOT NULL,
   `password` text NOT NULL,
+  `salt` text NOT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

@@ -64,9 +64,12 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 	// POST users
 	if r.Method == http.MethodPost {
 		name := r.FormValue("name")
-		password := []byte(r.FormValue("password"))
+		password := r.FormValue("password")
+		salt := pseudo_uuid()
+		password_added_salt := password + salt
+		password_byte := []byte(password_added_salt)
 		hasher := sha256.New()
-		hasher.Write([]byte(password))
+		hasher.Write([]byte(password_byte))
 		hashedPasswordString := hex.EncodeToString(hasher.Sum(nil))
 
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
@@ -96,16 +99,16 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/posts", http.StatusSeeOther)
 			return
 		}
-
+		print(salt)
 		// 入力情報に一致するユーザ情報がない場合はアカウントを新規作成してログイン
-		ins, err := db.Prepare("insert into users(name, password) value (?, ?)")
+		ins, err := db.Prepare("insert into users(name, password, salt) value (?, ?, ?)")
 		if err != nil {
 			log.Fatalf("prepare insert error err:%v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		res, err := ins.Exec(name, hashedPasswordString)
+		res, err := ins.Exec(name, hashedPasswordString, salt)
 		if err != nil {
 			log.Fatalf("insert error err:%v", err)
 			w.WriteHeader(http.StatusInternalServerError)
