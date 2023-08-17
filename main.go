@@ -110,7 +110,6 @@ func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 	}
-
 }
 
 type getUserHandler struct {
@@ -167,12 +166,69 @@ func (h *newUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type postsHandler struct {
+	count int
+}
+
+type Post struct {
+	ID        int       `db:"id"`
+	Text      string    `db:"text"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+}
+
+func (h *postsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		text := r.FormValue("text")
+
+		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		defer db.Close()
+		if err != nil {
+			fmt.Printf("error")
+		}
+		ins, err := db.Prepare("insert into posts(text) value (?)")
+		if err != nil {
+			fmt.Printf("error")
+			return
+		}
+		res, err := ins.Exec(text)
+		post_id, err := res.LastInsertId()
+		w.Header().Add("set-cookie", "token=uuid; Max-Age=86400; SameSite=Strict; Secure; HttpOnly")
+		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusTemporaryRedirect)
+		return
+	}
+	if r.Method == http.MethodGet {
+		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		if err != nil {
+			fmt.Printf("error")
+		}
+		rows, err := db.Query("select id, text, created_at, updated_at from posts")
+		defer db.Close()
+
+		var posts []Post
+		for rows.Next() {
+			p := &Post{}
+			if err := rows.Scan(&p.ID, &p.Text, &p.CreatedAt, &p.UpdatedAt); err != nil {
+				log.Fatalf("getRows rows.Scan error err:%v", err)
+			}
+			posts = append(posts, *p)
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(posts); err != nil {
+			log.Println(err)
+		}
+	}
+}
+
 func main() {
 	http.Handle("/count", new(countHandler))
 	http.Handle("/users", new(getUsersHandler))
 	// for /users/:id
 	http.Handle("/users/", new(getUserHandler))
 	http.Handle("/users/new", new(newUserHandler))
+	http.Handle("/posts/", new(postsHandler))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
