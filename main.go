@@ -82,7 +82,17 @@ func (h *getUsersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 		print(session_insert_res.LastInsertId())
+
 		w.Header().Add("set-cookie", "token=uuid; Max-Age=86400; SameSite=Strict; Secure; HttpOnly")
+		cookie := &http.Cookie{
+			Name:     "token",
+			Value:    uuid,
+			MaxAge:   86400,
+			SameSite: http.SameSiteStrictMode,
+			HttpOnly: true,
+			Secure:   true,
+		}
+		http.SetCookie(w, cookie)
 		http.Redirect(w, r, "/posts", http.StatusTemporaryRedirect)
 		return
 	}
@@ -134,7 +144,6 @@ func (h *getUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("error")
 	}
 	row := db.QueryRow("select * from users where id = ? limit 1", id)
-
 	defer db.Close()
 
 	u := &User{}
@@ -173,27 +182,37 @@ type postsHandler struct {
 type Post struct {
 	ID        int       `db:"id"`
 	Text      string    `db:"text"`
+	UserId    int       `db:"id"`
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
 func (h *postsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		token, err := r.Cookie("token")
+		if err != nil {
+			log.Println(err)
+		}
 		text := r.FormValue("text")
-
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		defer db.Close()
-		if err != nil {
-			fmt.Printf("error")
+
+		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
+		var userID int
+		if err := row.Scan(&userID); err != nil {
+			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
 		}
-		ins, err := db.Prepare("insert into posts(text) value (?)")
+
+		if err != nil {
+			log.Println(err)
+		}
+		ins, err := db.Prepare("insert into posts(text, user_id) value (?, ?)")
 		if err != nil {
 			fmt.Printf("error")
 			return
 		}
-		res, err := ins.Exec(text)
+		res, err := ins.Exec(text, userID)
 		post_id, err := res.LastInsertId()
-		w.Header().Add("set-cookie", "token=uuid; Max-Age=86400; SameSite=Strict; Secure; HttpOnly")
 		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusTemporaryRedirect)
 		return
 	}
@@ -202,13 +221,13 @@ func (h *postsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Printf("error")
 		}
-		rows, err := db.Query("select id, text, created_at, updated_at from posts")
+		rows, err := db.Query("select id, text, user_id, created_at, updated_at from posts")
 		defer db.Close()
 
 		var posts []Post
 		for rows.Next() {
 			p := &Post{}
-			if err := rows.Scan(&p.ID, &p.Text, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			if err := rows.Scan(&p.ID, &p.Text, &p.UserId, &p.CreatedAt, &p.UpdatedAt); err != nil {
 				log.Fatalf("getRows rows.Scan error err:%v", err)
 			}
 			posts = append(posts, *p)
@@ -222,13 +241,27 @@ func (h *postsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func postsNewHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Printf("method not allowed")
+		return
+	}
+	t := template.Must(template.ParseFiles("./template/posts-new.html"))
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := t.Execute(w, nil); err != nil {
+		panic(err.Error())
+	}
+}
+
 func main() {
 	http.Handle("/count", new(countHandler))
 	http.Handle("/users", new(getUsersHandler))
 	// for /users/:id
 	http.Handle("/users/", new(getUserHandler))
 	http.Handle("/users/new", new(newUserHandler))
-	http.Handle("/posts/", new(postsHandler))
+	http.Handle("/posts", new(postsHandler))
+	http.HandleFunc("/posts/new", postsNewHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
