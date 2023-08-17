@@ -292,6 +292,49 @@ func postsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == http.MethodPost {
+		text := r.FormValue("text")
+		segments := strings.Split(r.URL.Path, "/")
+		if len(segments) != 4 || segments[2] == "" || segments[3] != "comments" {
+			http.NotFound(w, r)
+			return
+		}
+		post_id := segments[2]
+		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		if err != nil {
+			log.Fatalf("open db error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer db.Close()
+
+		token, err := r.Cookie("token")
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
+		var user_id int
+		if err := row.Scan(&user_id); err != nil {
+			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		ins, err := db.Prepare("insert into comments(text, post_id, user_id) value (?, ?, ?)")
+		if err != nil {
+			log.Fatalf("prepare error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = ins.Exec(text, post_id, user_id)
+
+		http.Redirect(w, r, fmt.Sprintf("/posts/%s", post_id), http.StatusSeeOther)
+		return
+	}
+
 }
 
 func main() {

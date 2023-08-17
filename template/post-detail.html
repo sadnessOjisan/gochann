@@ -13,12 +13,11 @@
       <h2>{{ .Text }}</h2>
       <p>{{ .CreatedAt }}</p>
     </div>
-    <form>
-      <form action="/posts/{{ .ID }}/comments" method="post">
-        <label for="text">post</label>
-        <input name="text" type="text" id="text" />
-        <button type="submit">送信</button>
-      </form>
+    {{.ID}}
+    <form action="/posts/{{ .ID }}/comments" method="post">
+      <label for="text">post</label>
+      <input name="text" type="text" id="text" />
+      <button type="submit">送信</button>
     </form>
     <div>
       {{ range .Comments }}

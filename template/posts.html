@@ -10,10 +10,10 @@
     <a href="/posts/new">new</a>
     <h1>投稿一覧</h1>
     {{ range . }}
-    <div>
+    <a href="/posts/{{ .ID }}">
       <h2>{{ .Text }}</h2>
       <p>{{ .CreatedAt }}</p>
-    </div>
+    </a>
     {{ end }}
   </body>
 </html>
