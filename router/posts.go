@@ -26,6 +26,40 @@ func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
 
 func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		token, err := r.Cookie("token")
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		if err != nil {
+			log.Fatalf("open db error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer db.Close()
+		signin_user_query := `
+		  select
+		    users.id, users.name
+		  from
+		    session
+		  inner join
+		    users
+		  on
+		    users.id = session.user_id
+		  where
+		    token = ?
+		`
+		row := db.QueryRow(signin_user_query, token.Value)
+		u := &model.User{}
+		if err := row.Scan(&u.ID, &u.Name); err != nil {
+			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		sub := strings.TrimPrefix(r.URL.Path, "/posts")
 		_, id := filepath.Split(sub)
 		if id == "" {
@@ -33,8 +67,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("id is not found")
 			return
 		}
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
-		defer db.Close()
+
 		if err != nil {
 			fmt.Printf("error")
 		}
@@ -44,48 +77,79 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			post_user.id, post_user.name,
 			c.id as comment_id, c.text as comment_text, c.created_at as comment_created_at, c.updated_at as comment_updated_at,
 			comment_user.id, comment_user.name
-		  from posts p
-		  inner join comments c
-		  on p.id = c.post_id
-		  inner join users post_user
-		  on p.user_id = post_user.id
-		  inner join users comment_user
-		  on c.user_id = comment_user.id
-		  where p.id = ?
-		  order by c.id
+		  from
+		    posts p
+		  join
+		    users post_user
+		  on
+		    p.user_id = post_user.id
+		  left join
+		    comments c
+		  on
+		    p.id = c.post_id
+		  left join
+		    users comment_user
+		  on
+		    c.user_id = comment_user.id
+		  where
+		    p.id = ?
 		`
 		rows, err := db.Query(query, id)
 		if err != nil {
-			println("db query error")
-			panic(err.Error())
+			log.Fatalf("db query error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		println("rows: ", rows)
 
 		post := &model.Post{}
 		for rows.Next() {
-			comment := &model.Comment{}
+			fmt.Println("rows scan")
 			post_user := &model.User{}
-			comment_user := &model.User{}
+			comment_dto := &struct {
+				ID        sql.NullInt16
+				Text      sql.NullString
+				CreatedAt sql.NullTime
+				UpdatedAt sql.NullTime
+			}{}
+			user_dto := &struct {
+				ID   sql.NullInt16
+				Name sql.NullString
+			}{}
 			err = rows.Scan(
 				&post.ID, &post.Text, &post.CreatedAt, &post.UpdatedAt,
 				&post_user.ID, &post_user.Name,
-				&comment.ID, &comment.Text, &comment.CreatedAt, &comment.UpdatedAt,
-				&comment_user.ID, &comment_user.Name,
+				&comment_dto.ID, &comment_dto.Text, &comment_dto.CreatedAt, &comment_dto.UpdatedAt,
+				&user_dto.ID, &user_dto.Name,
 			)
 			if err != nil {
-				log.Fatalf("%v", *comment)
-				log.Fatalf("%v", err)
+				log.Fatalf("db scan error err:%v", err)
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			post.User = *post_user
-			comment.User = *comment_user
-			post.Comments = append(post.Comments, *comment)
+			if comment_dto.ID.Int16 != 0 {
+				post.Comments = append(post.Comments, model.Comment{
+					ID:        int(comment_dto.ID.Int16),
+					Text:      comment_dto.Text.String,
+					CreatedAt: comment_dto.CreatedAt.Time,
+					UpdatedAt: comment_dto.UpdatedAt.Time,
+					User: model.User{
+						ID:   int(user_dto.ID.Int16),
+						Name: user_dto.Name.String,
+					},
+				})
+			}
+
 		}
 
 		t := template.Must(template.ParseFiles("./template/post-detail.html"))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Println(post.Comments)
 
-		if err := t.Execute(w, post); err != nil {
+		if err := t.Execute(w, struct {
+			model.Post
+			model.User
+		}{Post: *post, User: *u}); err != nil {
 			panic(err.Error())
 		}
 		return
@@ -161,7 +225,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		res, err := ins.Exec(text, userID)
 		post_id, err := res.LastInsertId()
-		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusSeeOther)
 		return
 	}
 	if r.Method == http.MethodGet {
