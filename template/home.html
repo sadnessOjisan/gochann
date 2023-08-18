@@ -13,26 +13,38 @@
   <body>
     <div>
       <h1>Goちゃんねる</h1>
-      <form action="/users" method="post">
-        <label for="name">name</label>
-        <input
-          name="name"
-          type="text"
-          id="name"
-          required
-          minlength="1"
-          maxlength="32"
-        />
-        <label for="pawwsord">password</label>
-        <input
-          name="password"
-          type="password"
-          id="password"
-          required
-          minlength="1"
-          maxlength="100"
-        />
-        <button type="submit">はじめる</button>
+      <form
+        action="/users"
+        method="post"
+        style="display: flex; align-items: flex-end"
+      >
+        <div>
+          <label for="name">name</label>
+          <input
+            name="name"
+            type="text"
+            id="name"
+            required
+            minlength="1"
+            maxlength="32"
+            style="height: 30px; margin-right: 24px"
+          />
+        </div>
+        <div>
+          <label for="pawwsord">password</label>
+          <input
+            name="password"
+            type="password"
+            id="password"
+            required
+            minlength="1"
+            maxlength="100"
+            style="height: 30px; margin-right: 24px; width: 250px"
+          />
+        </div>
+        <button type="submit" style="height: 50px; padding: 10px">
+          はじめる
+        </button>
       </form>
       <p>※一度登録したユーザーは同じID,PASSWORDでログインできます</p>
       <ul>

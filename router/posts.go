@@ -143,7 +143,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		  on
 		    c.user_id = comment_user.id
 		  where
-		    p.id = ?
+		    p.id = ?		  
 		`
 		rows, err := db.Query(query, id)
 		if err != nil {
@@ -340,6 +340,8 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		    users u
 		  on
 		    user_id = u.id
+		  order by
+		    p.created_at desc
 		`)
 		defer db.Close()
 
