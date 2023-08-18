@@ -296,6 +296,11 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 		dsn := os.Getenv("dbdsn")
 		db, err := sql.Open("mysql", dsn)
+		if err != nil {
+			log.Printf("ERROR: db open err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		defer db.Close()
 
 		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
@@ -378,6 +383,11 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		  order by
 		    p.created_at desc
 		`)
+		if err != nil {
+			log.Printf("ERROR: exec posts query err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		defer db.Close()
 
 		var posts []model.Post
