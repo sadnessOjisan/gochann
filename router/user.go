@@ -91,7 +91,11 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		var user_id int
 		var current_user_salt string
 		var current_user_hashed_password string
-		exsist_user_row.Scan(&user_id, &current_user_hashed_password, &current_user_salt)
+		if err := exsist_user_row.Scan(&user_id, &current_user_hashed_password, &current_user_salt); err != nil && err != sql.ErrNoRows {
+			log.Printf("ERROR: db scan user err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		password := r.FormValue("password")
 		if !(utf8.RuneCountInString(password) >= 1 && utf8.RuneCountInString(password) <= 100) {
@@ -210,6 +214,11 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rows, err := db.Query("select * from users")
+		if err != nil {
+			log.Printf("ERROR: exec users query err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		var users []model.User
 		for rows.Next() {
