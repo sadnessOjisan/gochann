@@ -201,6 +201,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostsHandler(w http.ResponseWriter, r *http.Request) {
+	// POST /posts
 	if r.Method == http.MethodPost {
 		token, err := r.Cookie("token")
 		if err != nil {
@@ -230,11 +231,43 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusSeeOther)
 		return
 	}
+
+	// GET /posts
 	if r.Method == http.MethodGet {
+		token, err := r.Cookie("token")
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		if err != nil {
-			fmt.Printf("error")
+			log.Fatalf("open db error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
+		defer db.Close()
+		signin_user_query := `
+		  select
+		    users.id, users.name
+		  from
+		    session
+		  inner join
+		    users
+		  on
+		    users.id = session.user_id
+		  where
+		    token = ?
+		`
+		row := db.QueryRow(signin_user_query, token.Value)
+		u := &model.User{}
+		if err := row.Scan(&u.ID, &u.Name); err != nil {
+			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		rows, err := db.Query(`
 		  select
 		    p.id, p.title, p.text, p.created_at, p.updated_at,
@@ -262,9 +295,12 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			posts = append(posts, *p)
 		}
 
-		t := template.Must(template.ParseFiles("./template/posts.html"))
+		t := template.Must(template.ParseFiles("./template/posts.html", "./template/_header.html"))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := t.Execute(w, posts); err != nil {
+		if err := t.Execute(w, struct {
+			Posts []model.Post
+			model.User
+		}{Posts: posts, User: *u}); err != nil {
 			panic(err.Error())
 		}
 	}

@@ -7,12 +7,9 @@
     <title>learn go server</title>
   </head>
   <body>
-    <a href="/posts/new">new</a>
-    <form action="/signout" method="POST">
-      <button>signout</button>
-    </form>
+    {{template "header" .User}}
     <h1>投稿一覧</h1>
-    {{ range . }}
+    {{ range .Posts }}
     <a href="/posts/{{ .ID }}">
       <h2>{{ .Title }}</h2>
       <p>{{ .Text }}</p>

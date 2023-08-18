@@ -1,0 +1,9 @@
+{{define "header"}}
+<header>
+  <a href="/posts/new">new</a>
+  <form action="/signout" method="POST">
+    <button>signout</button>
+  </form>
+  <span>{{.Name}}</span>
+</header>
+{{end}}
