@@ -16,8 +16,9 @@
     <h1>投稿</h1>
     <div>
       {{.Post.ID}}
-      <h2>{{ .Post.Text }}</h2>
-      <p>{{ .Post.CreatedAt }}</p>
+      <h2>{{ .Post.Title }}</h2>
+      <p>{{ .Post.Text }}</p>
+      <p>{{ .Post.CreatedAt.Format "2006/01/02 15:04" }}</p>
       <span>{{.Post.User.Name}}</span>
     </div>
     <form action="/posts/{{ .Post.ID }}/comments" method="post">
@@ -30,7 +31,7 @@
       <div>
         <span>{{ .ID }}</span>
         <h2>{{ .Text }}</h2>
-        <p>{{ .CreatedAt }}</p>
+        <p>{{ .CreatedAt.Format "2006/01/02 15:04" }}</p>
         <span>{{.User.Name}}</span>
       </div>
       {{ end }}

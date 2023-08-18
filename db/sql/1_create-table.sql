@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS micro_post.session(
 
 CREATE TABLE IF NOT EXISTS micro_post.posts(
   `id` int(11) AUTO_INCREMENT,
+  `title` varchar(32) NOT NULL,
   `text` text NOT NULL,
   `user_id` int(11) NOT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,

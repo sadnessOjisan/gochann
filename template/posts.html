@@ -14,9 +14,10 @@
     <h1>投稿一覧</h1>
     {{ range . }}
     <a href="/posts/{{ .ID }}">
-      <h2>{{ .Text }}</h2>
+      <h2>{{ .Title }}</h2>
+      <p>{{ .Text }}</p>
       <p>{{ .User.Name }}</p>
-      <p>{{ .CreatedAt }}</p>
+      <p>{{ .CreatedAt.Format "2006/01/02 15:04" }}</p>
     </a>
     {{ end }}
   </body>

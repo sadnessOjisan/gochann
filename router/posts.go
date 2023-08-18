@@ -73,7 +73,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		query := `
 		  select
-		    p.id, p.text, p.created_at, p.updated_at,
+		    p.id, p.title, p.text, p.created_at, p.updated_at,
 			post_user.id, post_user.name,
 			c.id as comment_id, c.text as comment_text, c.created_at as comment_created_at, c.updated_at as comment_updated_at,
 			comment_user.id, comment_user.name
@@ -116,7 +116,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 				Name sql.NullString
 			}{}
 			err = rows.Scan(
-				&post.ID, &post.Text, &post.CreatedAt, &post.UpdatedAt,
+				&post.ID, &post.Title, &post.Text, &post.CreatedAt, &post.UpdatedAt,
 				&post_user.ID, &post_user.Name,
 				&comment_dto.ID, &comment_dto.Text, &comment_dto.CreatedAt, &comment_dto.UpdatedAt,
 				&user_dto.ID, &user_dto.Name,
@@ -155,6 +155,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// POST /posts/:id/comments
 	if r.Method == http.MethodPost {
 		text := r.FormValue("text")
 		segments := strings.Split(r.URL.Path, "/")
@@ -205,6 +206,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
+		title := r.FormValue("title")
 		text := r.FormValue("text")
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		defer db.Close()
@@ -218,12 +220,12 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-		ins, err := db.Prepare("insert into posts(text, user_id) value (?, ?)")
+		ins, err := db.Prepare("insert into posts(title, text, user_id) value (?, ?, ?)")
 		if err != nil {
 			fmt.Printf("error")
 			return
 		}
-		res, err := ins.Exec(text, userID)
+		res, err := ins.Exec(title, text, userID)
 		post_id, err := res.LastInsertId()
 		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusSeeOther)
 		return
@@ -235,7 +237,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		rows, err := db.Query(`
 		  select
-		    p.id, p.text, p.created_at, p.updated_at,
+		    p.id, p.title, p.text, p.created_at, p.updated_at,
 			u.id as user_id, u.name as user_name
 		  from
 		    posts p
@@ -253,7 +255,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			p := &model.Post{}
 			u := &model.User{}
-			if err := rows.Scan(&p.ID, &p.Text, &p.CreatedAt, &p.UpdatedAt, &u.ID, &u.Name); err != nil {
+			if err := rows.Scan(&p.ID, &p.Title, &p.Text, &p.CreatedAt, &p.UpdatedAt, &u.ID, &u.Name); err != nil {
 				log.Fatalf("getRows rows.Scan error err:%v", err)
 			}
 			p.User = *u
