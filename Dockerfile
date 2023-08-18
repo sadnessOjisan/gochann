@@ -19,6 +19,8 @@ RUN go build -o main
 # hadolint ignore=DL3007
 FROM gcr.io/distroless/static-debian11:latest
 
+ENV TZ=Asia/Tokyo
+
 WORKDIR /
 
 COPY --from=builder /build/main /main
