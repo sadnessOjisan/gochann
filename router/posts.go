@@ -7,12 +7,14 @@ import (
 	"learn-go-server/model"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodGet {
 		log.Printf("ERROR: invalid method")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -25,7 +27,8 @@ func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+	dsn := os.Getenv("dbdsn")
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Printf("ERROR: db open err: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -47,8 +50,14 @@ func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
 	row := db.QueryRow(signin_user_query, token.Value)
 	u := &model.User{}
 	if err := row.Scan(&u.ID, &u.Name); err != nil {
-		log.Printf("ERROR: user row scan err: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		// token に紐づくユーザーがないので認証エラー。token リセットしてホームに戻す。
+		cookie := &http.Cookie{
+			Name:    "token",
+			Expires: time.Now(),
+		}
+
+		http.SetCookie(w, cookie)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -71,13 +80,14 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		dsn := os.Getenv("dbdsn")
+		db, err := sql.Open("mysql", dsn)
+		defer db.Close()
 		if err != nil {
 			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		defer db.Close()
 		signin_user_query := `
 		  select
 		    users.id, users.name
@@ -93,8 +103,14 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		row := db.QueryRow(signin_user_query, token.Value)
 		u := &model.User{}
 		if err := row.Scan(&u.ID, &u.Name); err != nil {
-			log.Printf("ERROR: user row scan err: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			// token に紐づくユーザーがないので認証エラー。token リセットしてホームに戻す。
+			cookie := &http.Cookie{
+				Name:    "token",
+				Expires: time.Now(),
+			}
+
+			http.SetCookie(w, cookie)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
@@ -201,13 +217,15 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		post_id := segments[2]
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+
+		dsn := os.Getenv("dbdsn")
+		db, err := sql.Open("mysql", dsn)
+		defer db.Close()
 		if err != nil {
 			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		defer db.Close()
 
 		token, err := r.Cookie("token")
 		if err != nil {
@@ -219,8 +237,8 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
 		var user_id int
 		if err := row.Scan(&user_id); err != nil {
-			log.Printf("ERROR: db scan user_id err: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("ERROR: db scan user err: %v", err)
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -246,14 +264,16 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		title := r.FormValue("title")
 		text := r.FormValue("text")
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+
+		dsn := os.Getenv("dbdsn")
+		db, err := sql.Open("mysql", dsn)
 		defer db.Close()
 
 		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
 		var userID int
 		if err := row.Scan(&userID); err != nil {
-			log.Printf("ERROR: db scan user_id err: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("ERROR: db scan user err: %v", err)
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -277,13 +297,14 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		dsn := os.Getenv("dbdsn")
+		db, err := sql.Open("mysql", dsn)
+		defer db.Close()
 		if err != nil {
 			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		defer db.Close()
 		signin_user_query := `
 		  select
 		    users.id, users.name
@@ -300,7 +321,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		u := &model.User{}
 		if err := row.Scan(&u.ID, &u.Name); err != nil {
 			log.Printf("ERROR: db scan user err: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 

@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
+	"time"
 )
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +23,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+	dsn := os.Getenv("dbdsn")
+	db, err := sql.Open("mysql", dsn)
 	defer db.Close()
 	if err != nil {
 		log.Printf("ERROR: db open err: %v", err)
@@ -32,8 +35,14 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
 	var user_id int
 	if err := row.Scan(&user_id); err != nil {
-		log.Printf("ERROR: db scan user_id err: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		// token に紐づくユーザーがないので認証エラー。token リセットしてホームに戻す。
+		cookie := &http.Cookie{
+			Name:    "token",
+			Expires: time.Now(),
+		}
+
+		http.SetCookie(w, cookie)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 

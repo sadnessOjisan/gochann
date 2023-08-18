@@ -10,6 +10,7 @@ import (
 	"learn-go-server/model"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -41,7 +42,9 @@ func UsersDetailHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+
+	dsn := os.Getenv("dbdsn")
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		fmt.Printf("error")
 	}
@@ -74,7 +77,8 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		hasher.Write([]byte(password_byte))
 		hashedPasswordString := hex.EncodeToString(hasher.Sum(nil))
 
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+		dsn := os.Getenv("dbdsn")
+		db, err := sql.Open("mysql", dsn)
 		defer db.Close()
 		if err != nil {
 			log.Printf("ERROR: db open err: %v", err)
@@ -153,13 +157,14 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 	// GET /posts
 	if r.Method == http.MethodGet {
-		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
+
+		dsn := os.Getenv("dbdsn")
+		db, err := sql.Open("mysql", dsn)
+		defer db.Close()
 		if err != nil {
 			fmt.Printf("error")
 		}
 		rows, err := db.Query("select * from users")
-
-		defer db.Close()
 
 		var users []model.User
 		for rows.Next() {

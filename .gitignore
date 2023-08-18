@@ -22,3 +22,4 @@ go.work
 
 /db/data
 /db/my.cnf
+.env
