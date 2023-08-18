@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // see: https://stackoverflow.com/questions/15130321/is-there-a-method-to-generate-a-uuid-with-go-language
@@ -69,7 +70,18 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 	// POST users
 	if r.Method == http.MethodPost {
 		name := r.FormValue("name")
+		if !(utf8.RuneCountInString(name) >= 1 && utf8.RuneCountInString(name) <= 32) {
+			log.Printf("ERROR: name length is not invalid")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		password := r.FormValue("password")
+		if !(utf8.RuneCountInString(password) >= 1 && utf8.RuneCountInString(password) <= 100) {
+			log.Printf("ERROR: title length is not invalid")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		salt := pseudo_uuid()
 		password_added_salt := password + salt
 		password_byte := []byte(password_added_salt)
@@ -105,7 +117,6 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/posts", http.StatusSeeOther)
 			return
 		}
-		print(salt)
 		// 入力情報に一致するユーザ情報がない場合はアカウントを新規作成してログイン
 		ins, err := db.Prepare("insert into users(name, password, salt) value (?, ?, ?)")
 		if err != nil {

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +217,12 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 	// POST /posts/:id/comments
 	if r.Method == http.MethodPost {
 		text := r.FormValue("text")
+		if !(utf8.RuneCountInString(text) >= 1 && utf8.RuneCountInString(text) <= 1000) {
+			log.Printf("ERROR: text length is not invalid")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		segments := strings.Split(r.URL.Path, "/")
 		if len(segments) != 4 || segments[2] == "" || segments[3] != "comments" {
 			http.NotFound(w, r)
@@ -269,6 +276,18 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		title := r.FormValue("title")
 		text := r.FormValue("text")
+
+		if !(utf8.RuneCountInString(title) >= 1 && utf8.RuneCountInString(title) <= 100) {
+			log.Printf("ERROR: title length is not invalid")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if !(utf8.RuneCountInString(text) >= 1 && utf8.RuneCountInString(text) <= 1000) {
+			log.Printf("ERROR: text length is not invalid")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 		dsn := os.Getenv("dbdsn")
 		db, err := sql.Open("mysql", dsn)
