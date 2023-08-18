@@ -5,28 +5,46 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Goちゃんねる</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
+    />
   </head>
   <body>
     {{template "header" .User}}
-    <h1>投稿</h1>
     <div>
-      <h2>{{ .Post.Title }}</h2>
+      <h1>{{ .Post.Title }}</h1>
       <p>{{ .Post.Text }}</p>
-      <p>{{ .Post.CreatedAt.Format "2006/01/02 15:04" }}</p>
-      <span>{{.Post.User.Name}}</span>
+      <div style="display: flex; justify-content: space-between">
+        <p>by {{.Post.User.Name}}</p>
+        <p>{{ .Post.CreatedAt.Format "2006/01/02 15:04" }}</p>
+      </div>
     </div>
-    <form action="/posts/{{ .Post.ID }}/comments" method="post">
-      <label for="text">post</label>
-      <input name="text" type="text" id="text" />
-      <button type="submit">送信</button>
+    <form
+      action="/posts/{{ .Post.ID }}/comments"
+      method="post"
+      style="margin: 48px 0px"
+    >
+      <label for="text">コメント</label>
+      <textarea
+        name="text"
+        type="text"
+        id="text"
+        required
+        minlength="1"
+        maxlength="1000"
+      ></textarea>
+      <button type="submit" style="width: 100%; margin-top: 12px">送信</button>
     </form>
     <div>
-      {{ range .Post.Comments }}
-      <div>
-        <span>{{ .ID }}</span>
-        <h2>{{ .Text }}</h2>
-        <p>{{ .CreatedAt.Format "2006/01/02 15:04" }}</p>
-        <span>{{.User.Name}}</span>
+      {{ range $i, $v := .Post.Comments }}
+      <div style="margin: 32px 0px">
+        <div>
+          <span>{{ add $i 1 }}</span>
+          <span>{{$v.User.Name}}</span>
+        </div>
+        <p>{{ $v.Text }}</p>
+        <span>{{ $v.CreatedAt.Format "2006/01/02 15:04" }}</span>
       </div>
       {{ end }}
     </div>

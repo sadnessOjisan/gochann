@@ -5,15 +5,33 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Goちゃんねる</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
+    />
   </head>
   <body>
     <div>
       <h1>Goちゃんねる</h1>
       <form action="/users" method="post">
         <label for="name">name</label>
-        <input name="name" type="text" id="name" />
+        <input
+          name="name"
+          type="text"
+          id="name"
+          required
+          minlength="1"
+          maxlength="32"
+        />
         <label for="pawwsord">password</label>
-        <input name="password" type="password" id="password" />
+        <input
+          name="password"
+          type="password"
+          id="password"
+          required
+          minlength="1"
+          maxlength="100"
+        />
         <button type="submit">はじめる</button>
       </form>
       <p>※一度登録したユーザーは同じID,PASSWORDでログインできます</p>

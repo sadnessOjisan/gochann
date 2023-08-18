@@ -1,10 +1,21 @@
 {{define "header"}}
-<header>
-  <a href="/posts/new">new</a>
-  <a href="/posts">投稿一覧</a>
-  <form action="/signout" method="POST">
-    <button>signout</button>
-  </form>
-  <span>{{.Name}}でログイン中</span>
+<header
+  style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+  "
+>
+  <div style="display: flex; align-items: center">
+    <a href="/posts/new" style="margin-right: 12px">新規投稿</a>
+    <a href="/posts">投稿一覧</a>
+  </div>
+  <div style="display: flex; align-items: center">
+    <p style="margin-right: 12px">{{.Name}}でログイン中</p>
+    <form action="/signout" method="POST">
+      <button>signout</button>
+    </form>
+  </div>
 </header>
 {{end}}

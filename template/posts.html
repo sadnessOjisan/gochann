@@ -5,17 +5,22 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Goちゃんねる</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
+    />
   </head>
   <body>
-    {{template "header" .User}}
-    <h1>投稿一覧</h1>
-    {{ range .Posts }}
-    <a href="/posts/{{ .ID }}">
-      <h2>{{ .Title }}</h2>
-      <p>{{ .Text }}</p>
-      <p>{{ .User.Name }}</p>
-      <p>{{ .CreatedAt.Format "2006/01/02 15:04" }}</p>
-    </a>
+    {{template "header" .User}} {{ range .Posts }}
+    <div style="margin: 32px 0px; border: solid gray 1px; padding: 16px">
+      <a href="/posts/{{ .ID }}" style="text-decoration: none">
+        <h2>{{ .Title }}</h2>
+        <div style="display: flex; justify-content: space-between">
+          <p>by {{ .User.Name }}</p>
+          <p>{{ .CreatedAt.Format "2006/01/02 15:04" }}</p>
+        </div>
+      </a>
+    </div>
     {{ end }}
   </body>
 </html>

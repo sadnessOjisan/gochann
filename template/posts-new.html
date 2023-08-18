@@ -5,15 +5,35 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Goちゃんねる</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
+    />
   </head>
   <body>
     {{template "header" .}}
     <h1>post 登録</h1>
     <form action="/posts" method="post">
-      <label for="title">title</label>
-      <input name="title" type="text" id="title" />
-      <label for="text">text</label>
-      <input name="text" type="text" id="text" />
+      <label for="title">タイトル</label>
+      <input
+        name="title"
+        type="text"
+        id="title"
+        style="width: calc(100% - 20px)"
+        required
+        minlength="1"
+        maxlength="100"
+      />
+      <label for="text">本文</label>
+      <textarea
+        name="text"
+        type="text"
+        id="text"
+        style="width: 100%"
+        required
+        minlength="1"
+        maxlength="1000"
+      ></textarea>
       <button type="submit">送信</button>
     </form>
   </body>

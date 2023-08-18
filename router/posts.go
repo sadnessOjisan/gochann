@@ -193,9 +193,14 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 		}
 
-		t := template.Must(template.ParseFiles("./template/post-detail.html", "./template/_header.html"))
+		funcs := template.FuncMap{
+			"add": func(a, b int) int {
+				return a + b
+			},
+		}
+		// NOTE: .Func を呼ぶ位置に注意
+		t := template.Must(template.New("post-detail.html").Funcs(funcs).ParseFiles("./template/post-detail.html", "./template/_header.html"))
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Println(post.Comments)
 
 		if err := t.Execute(w, struct {
 			model.Post
