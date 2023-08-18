@@ -37,8 +37,8 @@ func UsersDetailHandler(w http.ResponseWriter, r *http.Request) {
 	sub := strings.TrimPrefix(r.URL.Path, "/users")
 	_, id := filepath.Split(sub)
 	if id == "" {
+		log.Printf("ERROR: user id is not found err")
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Printf("id is not found")
 		return
 	}
 	db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
@@ -50,7 +50,9 @@ func UsersDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	u := &model.User{}
 	if err := row.Scan(&u.ID, &u.Name, &u.Email, &u.CreatedAt, &u.UpdatedAt); err != nil {
-		log.Fatalf("getRows rows.Scan error err:%v", err)
+		log.Printf("ERROR: db scan user err: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -75,7 +77,7 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		defer db.Close()
 		if err != nil {
-			log.Fatalf("open db error err:%v", err)
+			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -103,20 +105,20 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		// 入力情報に一致するユーザ情報がない場合はアカウントを新規作成してログイン
 		ins, err := db.Prepare("insert into users(name, password, salt) value (?, ?, ?)")
 		if err != nil {
-			log.Fatalf("prepare insert error err:%v", err)
+			log.Printf("ERROR: prepare users insert err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		res, err := ins.Exec(name, hashedPasswordString, salt)
 		if err != nil {
-			log.Fatalf("insert error err:%v", err)
+			log.Printf("ERROR: exec user insert err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		user_id, err := res.LastInsertId()
 		if err != nil {
-			log.Fatalf("get last id err:%v", err)
+			log.Printf("ERROR: get last user id err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -124,14 +126,14 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 		session_insert, err := db.Prepare("insert into session(user_id, token) value (?, ?)")
 		if err != nil {
-			log.Fatalf("prepare session insert error err:%v", err)
+			log.Printf("ERROR: prepare session insert err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		_, err = session_insert.Exec(user_id, uuid)
 		if err != nil {
-			log.Fatalf("session insert error err:%v", err)
+			log.Printf("ERROR: exec session insert err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -163,7 +165,9 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			u := &model.User{}
 			if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.CreatedAt, &u.UpdatedAt); err != nil {
-				log.Fatalf("getRows rows.Scan error err:%v", err)
+				log.Printf("ERROR: db scan user err: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			users = append(users, *u)
 		}

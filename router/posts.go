@@ -12,22 +12,22 @@ import (
 )
 
 func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
+		log.Printf("ERROR: invalid method")
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Printf("method not allowed")
 		return
 	}
 
 	token, err := r.Cookie("token")
 	if err != nil {
-		log.Println(err)
+		log.Printf("ERROR: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 	if err != nil {
-		log.Fatalf("open db error err:%v", err)
+		log.Printf("ERROR: db open err: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -47,7 +47,7 @@ func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
 	row := db.QueryRow(signin_user_query, token.Value)
 	u := &model.User{}
 	if err := row.Scan(&u.ID, &u.Name); err != nil {
-		log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+		log.Printf("ERROR: user row scan err: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -55,7 +55,9 @@ func PostsNewHandler(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("./template/posts-new.html", "./template/_header.html"))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.Execute(w, u); err != nil {
-		panic(err.Error())
+		log.Printf("ERROR: exec templating err: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -71,7 +73,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		if err != nil {
-			log.Fatalf("open db error err:%v", err)
+			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -91,7 +93,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		row := db.QueryRow(signin_user_query, token.Value)
 		u := &model.User{}
 		if err := row.Scan(&u.ID, &u.Name); err != nil {
-			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			log.Printf("ERROR: user row scan err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -99,14 +101,11 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		sub := strings.TrimPrefix(r.URL.Path, "/posts")
 		_, id := filepath.Split(sub)
 		if id == "" {
+			log.Printf("ERROR: post id not found err: %v", err)
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Printf("id is not found")
 			return
 		}
 
-		if err != nil {
-			fmt.Printf("error")
-		}
 		query := `
 		  select
 		    p.id, p.title, p.text, p.created_at, p.updated_at,
@@ -132,7 +131,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		`
 		rows, err := db.Query(query, id)
 		if err != nil {
-			log.Fatalf("db query error err:%v", err)
+			log.Printf("ERROR: exec posts query err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -158,7 +157,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 				&user_dto.ID, &user_dto.Name,
 			)
 			if err != nil {
-				log.Fatalf("db scan error err:%v", err)
+				log.Printf("ERROR: posts db scan err: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -186,7 +185,9 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			model.Post
 			model.User
 		}{Post: *post, User: *u}); err != nil {
-			panic(err.Error())
+			log.Printf("ERROR: exec templating err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		return
 	}
@@ -202,7 +203,7 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		post_id := segments[2]
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		if err != nil {
-			log.Fatalf("open db error err:%v", err)
+			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -218,14 +219,14 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
 		var user_id int
 		if err := row.Scan(&user_id); err != nil {
-			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			log.Printf("ERROR: db scan user_id err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		ins, err := db.Prepare("insert into comments(text, post_id, user_id) value (?, ?, ?)")
 		if err != nil {
-			log.Fatalf("prepare error err:%v", err)
+			log.Printf("ERROR: prepare comment insert err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -251,12 +252,11 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		row := db.QueryRow("select user_id from session where token = ? limit 1", token.Value)
 		var userID int
 		if err := row.Scan(&userID); err != nil {
-			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			log.Printf("ERROR: db scan user_id err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
-		if err != nil {
-			log.Println(err)
-		}
 		ins, err := db.Prepare("insert into posts(title, text, user_id) value (?, ?, ?)")
 		if err != nil {
 			fmt.Printf("error")
@@ -279,7 +279,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 		db, err := sql.Open("mysql", "ojisan:ojisan@(127.0.0.1:3306)/micro_post?parseTime=true")
 		if err != nil {
-			log.Fatalf("open db error err:%v", err)
+			log.Printf("ERROR: db open err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -299,7 +299,7 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		row := db.QueryRow(signin_user_query, token.Value)
 		u := &model.User{}
 		if err := row.Scan(&u.ID, &u.Name); err != nil {
-			log.Fatalf("user_id getRows rows.Scan error err:%v", err)
+			log.Printf("ERROR: db scan user err: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -316,16 +316,15 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 		    user_id = u.id
 		`)
 		defer db.Close()
-		if err != nil {
-			println("rows scan fail")
-			panic(err.Error())
-		}
+
 		var posts []model.Post
 		for rows.Next() {
 			p := &model.Post{}
 			u := &model.User{}
 			if err := rows.Scan(&p.ID, &p.Title, &p.Text, &p.CreatedAt, &p.UpdatedAt, &u.ID, &u.Name); err != nil {
-				log.Fatalf("getRows rows.Scan error err:%v", err)
+				log.Printf("ERROR: db scan post err: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			p.User = *u
 			posts = append(posts, *p)
@@ -337,7 +336,9 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 			Posts []model.Post
 			model.User
 		}{Posts: posts, User: *u}); err != nil {
-			panic(err.Error())
+			log.Printf("ERROR: exec templating err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 }
