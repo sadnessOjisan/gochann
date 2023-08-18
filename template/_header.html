@@ -1,9 +1,10 @@
 {{define "header"}}
 <header>
   <a href="/posts/new">new</a>
+  <a href="/posts">投稿一覧</a>
   <form action="/signout" method="POST">
     <button>signout</button>
   </form>
-  <span>{{.Name}}</span>
+  <span>{{.Name}}でログイン中</span>
 </header>
 {{end}}

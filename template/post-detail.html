@@ -7,15 +7,9 @@
     <title>learn go server</title>
   </head>
   <body>
-    <a href="/posts/new">new</a>
-    <form action="/signout" method="POST">
-      <button>signout</button>
-    </form>
-    <span>{{.User.Name}}</span>
-
+    {{template "header" .User}}
     <h1>投稿</h1>
     <div>
-      {{.Post.ID}}
       <h2>{{ .Post.Title }}</h2>
       <p>{{ .Post.Text }}</p>
       <p>{{ .Post.CreatedAt.Format "2006/01/02 15:04" }}</p>
