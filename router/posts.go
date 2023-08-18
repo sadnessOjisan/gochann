@@ -261,6 +261,11 @@ func PostsDetailHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_, err = ins.Exec(text, post_id, user_id)
+		if err != nil {
+			log.Printf("ERROR: exec comment insert err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		http.Redirect(w, r, fmt.Sprintf("/posts/%s", post_id), http.StatusSeeOther)
 		return
@@ -303,11 +308,22 @@ func PostsHandler(w http.ResponseWriter, r *http.Request) {
 
 		ins, err := db.Prepare("insert into posts(title, text, user_id) value (?, ?, ?)")
 		if err != nil {
-			fmt.Printf("error")
+			log.Printf("ERROR: prepare posts insert err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		res, err := ins.Exec(title, text, userID)
+		if err != nil {
+			log.Printf("ERROR: exec post insert err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		post_id, err := res.LastInsertId()
+		if err != nil {
+			log.Printf("ERROR: exec get post last id err: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		http.Redirect(w, r, fmt.Sprintf("posts/%d", post_id), http.StatusSeeOther)
 		return
 	}
